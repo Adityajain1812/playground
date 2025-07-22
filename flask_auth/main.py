@@ -76,3 +76,51 @@ def register():
         return redirect(url_for("secrets"))
 
     return render_template("register.html", logged_in=current_user.is_authenticated)
+
+
+@app.route('/login', methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        result = db.session.execute(db.select(User).where(User.email == email))
+        user = result.scalar()
+        # Email doesn't exist or password incorrect.
+        if not user:
+            flash("That email does not exist, please try again.")
+            return redirect(url_for('login'))
+        elif not check_password_hash(user.password, password):
+            flash('Password incorrect, please try again.')
+            return redirect(url_for('login'))
+        else:
+            login_user(user)
+            return redirect(url_for('secrets'))
+
+    return render_template("login.html", logged_in=current_user.is_authenticated)
+
+
+@app.route('/secrets')
+@login_required
+def secrets():
+    print(current_user.name)
+    return render_template("secrets.html", name=current_user.name, logged_in=True)
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('home'))
+
+
+@app.route('/download')
+@login_required
+def download():
+
+    # return send_from_directory('/static/files/', 'cheat_sheet.pdf')
+    return send_from_directory('static', path="files/cheat_sheet.pdf")
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
